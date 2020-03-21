@@ -1,11 +1,12 @@
 import flask
-from flask import request, jsonify
+from flask import request, jsonify, CORS
 import bioprocessor
 import json
 
 p = bioprocessor.BioProcessor()
 
 app = flask.Flask(__name__)
+CORS(app)
 
 @app.route('/', methods=['GET'])
 def home():

@@ -3,3 +3,4 @@ https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.2.4/en_ner_bc5cdr
 pysolr
 flask
 flask_restful
+flask-cors
