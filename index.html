@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>librAIry Bio-NLP</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--===============================================================================================-->
+	<!--<link rel="icon" type="image/png" href="images/icons/favicon.ico"/>-->
+<!--===============================================================================================-->
+	<link rel="stylesheet" type="text/css" href="vendor/bootstrap/css/bootstrap.min.css">
+<!--===============================================================================================-->
+	<link rel="stylesheet" type="text/css" href="fonts/font-awesome-4.7.0/css/font-awesome.min.css">
+<!--===============================================================================================-->
+	<link rel="stylesheet" type="text/css" href="vendor/animate/animate.css">
+<!--===============================================================================================-->
+	<link rel="stylesheet" type="text/css" href="vendor/css-hamburgers/hamburgers.min.css">
+<!--===============================================================================================-->
+	<link rel="stylesheet" type="text/css" href="vendor/select2/select2.min.css">
+<!--===============================================================================================-->
+	<link rel="stylesheet" type="text/css" href="css/util.css">
+	<link rel="stylesheet" type="text/css" href="css/main.css">
+<!--===============================================================================================-->
+</head>
+<body>
+
+	<div class="contact1">
+		<div class="container-contact1">
+			<div class="contact1-pic js-tilt" data-tilt>
+				<img src="images/drug.png" alt="IMG">
+			</div>
+
+				<span class="contact1-form-title">
+					find the drugs hidden in the text..
+				</span>
+
+				<div class="wrap-input1 validate-input" >
+					<textarea id="myTextarea" class="input1" ></textarea>
+					<span class="shadow-input1"></span>
+				</div>
+
+				<div>
+					<button onclick="doRequest()" class="contact1-form-btn">
+						<span>
+							Analyze
+						</span>
+					</button>
+				</div>
+
+				<div>
+					<table id="drugs_table" class="table">
+					</table>
+				</div>
+		</div>
+
+	</div>
+
+
+
+
+<!--===============================================================================================-->
+	<script src="vendor/jquery/jquery-3.2.1.min.js"></script>
+<!--===============================================================================================-->
+	<!--<script src="vendor/bootstrap/js/popper.js"></script>-->
+	<!--<script src="vendor/bootstrap/js/bootstrap.min.js"></script>-->
+<!--===============================================================================================-->
+	<script src="vendor/select2/select2.min.js"></script>
+<!--===============================================================================================-->
+	<script src="vendor/tilt/tilt.jquery.min.js"></script>
+	<script >
+		$('.js-tilt').tilt({
+			scale: 1.1
+		})
+		function doRequest() {
+			var message = {
+			            text: document.getElementById("myTextarea").value
+			        }
+			var message_data = JSON.stringify(message)
+      //console.log(message_data)
+			jQuery.ajax ({
+			    url: "http://librairy.linkeddata.es/bio-nlp/drugs",
+			    type: "POST",
+					data: message_data,
+			    contentType: "application/json; charset=utf-8",
+			    dataType: "json",
+			    success: function(response){
+			        //console.log("successfull result: " + JSON.stringify(response))
+							var trHTML = '';
+							$('#drugs_table tr').remove();
+							$('#drugs_table').append('<tr><th>Name</th><th>ATC-1</th><th>ATC-2</th><th>CUI</th><th>level</th></tr>');
+							$.each(response, function (i, item) {
+									var name = item.name
+									var atc1  = "-"
+									if (item.atc_code != null){
+										atc1 = item.atc_code
+									}
+									var atc2 = "-"
+									if (item.atc_parent != null){
+										atc2 = item.atc_parent
+									}
+									var cui = "-"
+									if (item.cui != null){
+										cui = item.cui
+									}
+									var level = "-"
+									if (item.level != null){
+										level = item.level
+									}
+							     trHTML += '<tr><td>' + name + '</td><td>' + atc1 + '</td><td>' + atc2 + '</td><td>' + cui + '</td><td>' + level +'</td></tr>';
+							});
+							$('#drugs_table').append(trHTML);
+
+			    },
+			    error: function(error){
+			        console.log('Error' +error)
+			    }
+			});
+		}
+	</script>
+
+</body>
+</html>
