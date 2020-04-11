@@ -1,5 +1,6 @@
 import flask
-from flask import request, jsonify, CORS
+from flask import request, jsonify
+from flask_cors import CORS, cross_origin
 import bioprocessor
 import json
 

@@ -17,18 +17,23 @@ class BioProcessor:
 
         # Search for candidates based on suffix
         for token in doc:
-            if (token.suffix_ == "vir"):
-                candidates.append(token.text)
+            token_text = token.text.lower()
+            if ("vir" in token_text):
+                candidates.append(token_text)
+            elif ("feron" in token_text):
+                candidates.append(token_text)
+            elif ("umab" in token_text):
+                candidates.append(token_text)
 
         # Search for candidates based on SpaCy NER
         for entity in doc.ents:
             #print("----->",entity.label, entity.label_, entity.text)
-            if (entity.label_ == "CHEMICAL"):
-                candidates.append(entity.text)
+            if (entity.label_ == "CHEMICAL" and len(entity.text) > 2):
+                candidates.append(entity.text.lower())
 
         # Retrieve the ATC Code
         drugs = []
-        for candidate in candidates:
+        for candidate in list(set(candidates)):
             #print("candidate: ", candidate)
             label = re.sub(r'\W+', ' ', candidate)
             results = self.solr.search("label_t:"+label)
