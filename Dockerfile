@@ -5,8 +5,10 @@ RUN pip install pysolr
 RUN pip install flask
 RUN pip install flask_restful
 RUN pip install flask-cors
+RUN pip install annoy
 COPY *.py /app/
 COPY *.txt /app/
+COPY index.* /app/
 WORKDIR /app
 ENTRYPOINT ["python"]
 CMD ["app.py"]
