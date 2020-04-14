@@ -52,7 +52,7 @@ class DrugProcessor:
 
     def get_drug_by_code(self,code):
         print("getting drug by code", code)
-        return self._get_drug_by_query("code_s:"+code)
+        return self._get_drug_by_query("code_s:"+code.upper())
 
 
     def get_drugs(self, num):
@@ -80,12 +80,14 @@ class DrugProcessor:
 
     def get_drugs_by_drug(self, code, level):
         search_word=code
-        print("search-word",search_word)
+        #print("search-word",search_word)
         ref_index = self.index_dict[search_word]
-        print("ref-index",ref_index)
+        #print("ref-index",ref_index)
         drugs = {}
-        for neighbour in self.index.get_nns_by_item(ref_index, 10):
-            print("neighbour",neighbour)
-            neighbour_drug = self.get_drug_by_code(self.index_inv_dict[neighbour])
-            drugs[neighbour_drug['code']]=neighbour_drug['name']
+        for neighbour in self.index.get_nns_by_item(ref_index, 11):
+            #print("neighbour",neighbour)
+            neighbour_code=self.index_inv_dict[neighbour]
+            if (code != neighbour_code):
+                neighbour_drug = self.get_drug_by_code(neighbour_code)
+                drugs[neighbour_drug['code']]=neighbour_drug['name']
         return drugs

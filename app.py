@@ -57,7 +57,7 @@ def get_drugs():
         print("get_drug_by_drug",drug)
         if ('code' in drug):
             drugs = drug_service.get_drugs_by_drug(drug['code'],drug['level'])
-    return json.dumps(drugs)
+    return jsonify(drugs)
 
 
 @app.route('/bio-nlp/diseases', methods=['GET'])
@@ -69,7 +69,7 @@ def get_diseases():
         drug = _get_drug(request)
         if ('code' in drug):
             diseases = disease_service.get_diseases_by_drug(drug['code'],drug['level'])
-    return json.dumps(diseases)
+    return jsonify(diseases)
 
 @app.route('/bio-nlp/articles', methods=['GET'])
 def get_articles():
@@ -80,7 +80,7 @@ def get_articles():
         drug = _get_drug(request)
         if ('code' in drug):
             articles = article_service.get_articles_by_drug(drug,10)
-    return json.dumps(articles)
+    return jsonify(articles)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
