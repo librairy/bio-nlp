@@ -22,7 +22,7 @@ class BioProcessor:
         for entity in doc.ents:
             #print("----->",entity.label, entity.label_, entity.text)
             if (entity.label_ == "DISEASE" and len(entity.text) > 2):
-                print(entity.text, entity.vector_norm)
+                #print(entity.text, entity.vector_norm)
                 candidates.append(entity)
 
         # Retrieve the ATC Code
