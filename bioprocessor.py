@@ -11,6 +11,44 @@ class BioProcessor:
         # Setup a Solr instance. The timeout is optional.
         self.solr = pysolr.Solr('http://librairy.linkeddata.es/solr/atc', timeout=10)
 
+        # Setup a Solr instance. The timeout is optional.
+        self.solr_diseases = pysolr.Solr('http://librairy.linkeddata.es/solr/diseases', timeout=10)
+
+    def get_diseases(self, text):
+        doc = self.nlp(text)
+        candidates = []
+
+        # Search for candidates based on SpaCy NER
+        for entity in doc.ents:
+            #print("----->",entity.label, entity.label_, entity.text)
+            if (entity.label_ == "DISEASE" and len(entity.text) > 2):
+                print(entity.text, entity.vector_norm)
+                candidates.append(entity)
+
+        # Retrieve the ATC Code
+        diseases = []
+        for candidate in list(set(candidates)):
+            #print("candidate: ", candidate)
+            label = re.sub(r'\W+', ' ', candidate.text)
+            solr_query = "name_t:\""+label+"\"^100 or synonyms:\""+label+"\"^10 or mappings:\""+label+"\"^1"
+            results = self.solr_diseases.search(solr_query)
+            if (len(results) == 0):
+                label_tokens = label.split(" ")
+                if (len(label_tokens) > 3):
+                    new_label = " ".join(label_tokens[:len(label_tokens)-1])
+                    solr_query = "name_t:\""+new_label+"\"^100 or synonyms:\""+new_label+"\"^10 or mappings:\""+new_label+"\"^1"
+                    results = self.solr_diseases.search(solr_query)
+            for result in results:
+                name = result["name_t"]
+                disease = {}
+                disease["name"] = name
+                disease['code'] =result["id"]
+                disease['level']=result["level_i"]
+                diseases.append(disease)
+                break
+        return diseases
+
+
     def get_drugs(self, text):
         doc = self.nlp(text)
         candidates = []

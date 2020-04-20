@@ -1,5 +1,5 @@
 import flask
-from flask import request, jsonify
+from flask import request, jsonify, abort
 from flask_cors import CORS, cross_origin
 import bioprocessor
 import diseaseprocessor
@@ -44,7 +44,7 @@ def post_drugs():
     if not request.json or not 'text' in request.json:
         abort(400)
     drugs = bio_service.get_drugs(request.json['text'])
-    return json.dumps(drugs)
+    return jsonify(drugs)
 
 @app.route('/bio-nlp/drugs', methods=['GET'])
 def get_drugs():
@@ -58,6 +58,13 @@ def get_drugs():
         if ('code' in drug):
             drugs = drug_service.get_drugs_by_drug(drug['code'],drug['level'])
     return jsonify(drugs)
+
+@app.route('/bio-nlp/diseases', methods=['POST'])
+def post_diseases():
+    if not request.json or not 'text' in request.json:
+        abort(400)
+    diseases = bio_service.get_diseases(request.json['text'])
+    return jsonify(diseases)
 
 
 @app.route('/bio-nlp/diseases', methods=['GET'])
