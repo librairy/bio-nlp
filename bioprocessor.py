@@ -88,4 +88,5 @@ class BioProcessor:
               if ("level_i" in result):
                   drug["level"] = result["level_i"]
               drugs.append(drug)
+              break
         return drugs
