@@ -7,10 +7,10 @@ class DrugProcessor:
 
     def __init__(self):
         # Setup a Solr instance. The timeout is optional.
-        self.atc_solr = pysolr.Solr('http://librairy.linkeddata.es/data/atc', timeout=10)
+        self.atc_solr = pysolr.Solr('http://librairy.linkeddata.es/data/atc', timeout=20)
 
-        self.sent_solr_url = 'http://librairy.linkeddata.es/data/covid-sentences'
-        self.sent_solr = pysolr.Solr(self.sent_solr_url, timeout=10)
+        self.cord19_solr_url = 'http://librairy.linkeddata.es/data/covid-paragraphs'
+        self.cord19_solr = pysolr.Solr(self.cord19_solr_url, timeout=20)
 
         self.index = AnnoyIndex(186, 'angular')
         self.index.load('index.annoy')
@@ -25,60 +25,95 @@ class DrugProcessor:
             self.index_inv_dict[value]=key
 
 
-    def _normalize(self,drugs):
-        total_frequency = sum(drugs.values())
-        for key in drugs.keys():
-            drugs[key] = round((drugs[key]*100)/total_frequency)
-        return drugs
-
-    def _get_drug_by_query(self,query):
+    def find_drugs(self, keyword):
+        query = "label_t:\""+keyword+"\" or code_s:"+keyword + " or id:" + keyword
         results = self.atc_solr.search(query)
-        drug = {}
+        drugs= []
         for result in results:
-            print(result)
+            drug = {}
             if ('label_t' in result):
                 drug['name'] = result['label_t']
-            if ('code_s' in result):
-                drug['code'] = result['code_s']
+            if ('id' in result):
+                drug['code'] = result['id']
             if ('level_i' in result):
                 drug['level'] = result['level_i']
-            break
-        print("drug found", drug)
-        return drug
+            drugs.append(drug)
+        print("found drugs",drugs)
+        return drugs
 
-    def get_drug_by_name(self, name):
-        print("getting drug by name", name)
-        return self._get_drug_by_query("label_t:"+name.lower())
-
-    def get_drug_by_code(self,code):
-        print("getting drug by code", code)
-        return self._get_drug_by_query("code_s:"+code.upper())
-
-
-    def get_drugs(self, num):
+    def get_drugs_as_terms(self, size,level):
         params = {}
-        params['terms.fl']='bionlp_atc5_t'
+        drug_level = 5
+        if (int(level) > 0):
+            drug_level=level
+        field = 'bionlp_drugs_C'+str(drug_level)
+        params['terms.fl']=field
         params['terms.sort']='count'
         params['terms.mincount']=1
-        params['terms.limit']=num
+        params['terms.limit']=size
 
-        url = self.sent_solr_url + "/terms"
-
+        url = self.cord19_solr_url + "/terms"
         resp = requests.get(url=url, params=params)
         data = resp.json()
-        drugs = {}
-        results = data['terms']['bionlp_atc5_t']
+        print(data)
+        drugs = []
+        results = data['terms'][field]
         i = 0
         while (i<len(results)):
-            drug = results[i]
+            drug_code = results[i]
+            print("drug code", drug_code)
             i+=1
             frequency = results[i]
             i+=1
-            drugs[drug]=frequency
-        return self._normalize(drugs)
+            drugs_candidates = self.find_drugs(drug_code.upper())
+            if (len(drugs_candidates) >0 ):
+                drug = drugs_candidates[0]
+                drug['freq'] = frequency
+                drugs.append(drug)
+        return drugs
 
 
-    def get_drugs_by_drug(self, code, level):
+    def get_drugs(self, query, size, level):
+        if (query == "*:*"):
+            return self.get_drugs_as_terms(size,level)
+        counter = 0
+        completed = False
+        window_size=50000
+        cursor = "*"
+        drugs = {}
+        while (not completed):
+            old_counter = counter
+            try:
+                fields = ["bionlp_drugs_N"+str(l)  for l in range(1,6)]
+                if (int(level) >= 0):
+                    fields = ["bionlp_drugs_N"+str(level)]
+                print("searching drugs in paragraphs by: ", query , " with fields: ", fields)
+                paragraphs = self.cord19_solr.search(q=query,fl=",".join(fields),rows=window_size,cursorMark=cursor,sort="id asc")
+                cursor = paragraphs.nextCursorMark
+                counter += len(paragraphs)
+                for paragraph in paragraphs:
+                    for field in fields:
+                        if (field in paragraph):
+                            for drug in paragraph[field]:
+                                if (not drug in drugs):
+                                    drugs[drug] = 0
+                                drugs[drug] = drugs[drug] +1
+                if (old_counter == counter):
+                    break
+            except Exception as e:
+                print(repr(e))
+        result = []
+        for w in sorted(drugs, key=drugs.get, reverse=True):
+            found_drugs = self.find_drugs(w)
+            if (len(found_drugs) > 0):
+                drug = found_drugs[0]
+                drug['freq'] = drugs[w]
+                result.append(drug)
+            if (len(result) >= size):
+                break
+        return result
+
+    def get_related_drugs(self, code, level):
         search_word=code
         #print("search-word",search_word)
         ref_index = self.index_dict[search_word]

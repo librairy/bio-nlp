@@ -1,71 +1,128 @@
 import pysolr
 import requests
-import time
+import csv
+from annoy import AnnoyIndex
 
 class DiseaseProcessor:
 
     def __init__(self):
         # Setup a Solr instance. The timeout is optional.
-        self.atc_solr = pysolr.Solr('http://librairy.linkeddata.es/data/atc', timeout=10)
+        self.diseases_solr = pysolr.Solr('http://librairy.linkeddata.es/data/diseases', timeout=20)
 
-        self.sent_solr_url = 'http://librairy.linkeddata.es/data/covid-sentences'
-        self.sent_solr = pysolr.Solr(self.sent_solr_url, timeout=10)
+        self.cord19_solr_url = 'http://librairy.linkeddata.es/data/covid-paragraphs'
+        self.cord19_solr = pysolr.Solr(self.cord19_solr_url, timeout=20)
 
-    def _normalize(self,diseases):
-        total_frequency = sum(diseases.values())
-        for key in diseases.keys():
-            diseases[key] = int((diseases[key]*100)/total_frequency)
+        self.index = AnnoyIndex(186, 'angular')
+        self.index.load('index.annoy')
+
+        with open('index.dictionary', mode='r') as infile:
+            reader = csv.reader(infile)
+            self.index_dict = dict((rows[0],int(rows[1])) for rows in reader)
+
+        self.index_inv_dict = {}
+        for key in self.index_dict.keys():
+            value = self.index_dict[key]
+            self.index_inv_dict[value]=key
+
+
+    def find_diseases(self, keyword):
+        query = "name_t:\""+keyword+"\" or synonyms:\""+keyword + "\" or mappings:\""+ keyword + "\" or id:" + keyword
+        results = self.diseases_solr.search(query)
+        diseases= []
+        for result in results:
+            disease = {}
+            if ('name_t' in result):
+                disease['name'] = result['name_t']
+            if ('id' in result):
+                disease['code'] = result['id']
+            if ('level_i' in result):
+                disease['level'] = result['level_i']
+            diseases.append(disease)
+        print("found diseases",diseases)
         return diseases
 
-
-    def get_diseases_by_drug(self, atc_code, level):
-        diseases = {}
-        counter = 0
-        completed = False
-        window_size=100
-        cursor = "*"
-        while (not completed):
-            old_counter = counter
-            solr_query="bionlp_atc"+str(level)+"_t:"+atc_code + " AND scispacy_diseases_t:[* TO *]"
-            try:
-                sentences = self.sent_solr.search(q=solr_query,rows=window_size,cursorMark=cursor,sort="id asc")
-                cursor = sentences.nextCursorMark
-                counter += len(sentences)
-                for sentence in sentences:
-                  if ('scispacy_diseases_t' in sentence):
-                      for disease in sentence['scispacy_diseases_t'].split(" "):
-                          if (not disease in diseases):
-                              diseases[disease] = 0
-                          diseases[disease] += 1
-                if (old_counter == counter):
-                    print("done!")
-                    break
-            except:
-                print("Solr query error. Wait for 5secs..")
-                time.sleep(5.0)
-        return self._normalize(diseases)
-
-    def get_diseases(self,num):
-        # http://librairy.linkeddata.es/data/covid-sentences/terms?terms.fl=scispacy_diseases_t
+    def get_diseases_as_terms(self, size,level):
         params = {}
-        params['terms.fl']='scispacy_diseases_t'
+        disease_level = 5
+        if (int(level) > 0):
+            disease_level=level
+        field = 'bionlp_diseases_C'+str(disease_level)
+        params['terms.fl']=field
         params['terms.sort']='count'
         params['terms.mincount']=1
-        params['terms.limit']=num
+        params['terms.limit']=size
 
-        url = self.sent_solr_url + "/terms"
-
+        url = self.cord19_solr_url + "/terms"
         resp = requests.get(url=url, params=params)
         data = resp.json()
-        diseases = {}
-        results = data['terms']['scispacy_diseases_t']
+        print(data)
+        diseases = []
+        results = data['terms'][field]
         i = 0
-        total_frequency = 0
         while (i<len(results)):
-            disease = results[i]
+            disease_code = results[i]
+            print("disease code", disease_code)
             i+=1
             frequency = results[i]
             i+=1
-            total_frequency += frequency
-            diseases[disease]=frequency
-        return self._normalize(diseases)
+            diseases_candidates = self.find_diseases(disease_code.upper())
+            if (len(diseases_candidates) >0 ):
+                disease = diseases_candidates[0]
+                disease['freq'] = frequency
+                diseases.append(disease)
+        return diseases
+
+
+    def get_diseases(self, query, size, level):
+        if (query == "*:*"):
+            return self.get_diseases_as_terms(size,level)
+        counter = 0
+        completed = False
+        window_size=50000
+        cursor = "*"
+        diseases = {}
+        while (not completed):
+            old_counter = counter
+            try:
+                fields = ["bionlp_diseases_N"+str(l)  for l in range(1,20)]
+                if (int(level) >= 0):
+                    fields = ["bionlp_diseases_N"+str(level)]
+                print("searching diseases in paragraphs by: ", query , " with fields: ", fields)
+                paragraphs = self.cord19_solr.search(q=query,fl=",".join(fields),rows=window_size,cursorMark=cursor,sort="id asc")
+                cursor = paragraphs.nextCursorMark
+                counter += len(paragraphs)
+                for paragraph in paragraphs:
+                    for field in fields:
+                        if (field in paragraph):
+                            for disease in paragraph[field]:
+                                if (not disease in diseases):
+                                    diseases[disease] = 0
+                                diseases[disease] = diseases[disease] +1
+                if (old_counter == counter):
+                    break
+            except Exception as e:
+                print(repr(e))
+        result = []
+        for w in sorted(diseases, key=diseases.get, reverse=True):
+            found_diseases = self.find_diseases(w)
+            if (len(found_diseases) > 0):
+                disease = found_diseases[0]
+                disease['freq'] = diseases[w]
+                result.append(disease)
+            if (len(result) >= size):
+                break
+        return result
+
+    def get_related_diseases(self, code, level):
+        search_word=code
+        #print("search-word",search_word)
+        ref_index = self.index_dict[search_word]
+        #print("ref-index",ref_index)
+        diseases = {}
+        for neighbour in self.index.get_nns_by_item(ref_index, 11):
+            #print("neighbour",neighbour)
+            neighbour_code=self.index_inv_dict[neighbour]
+            if (code != neighbour_code):
+                neighbour_disease = self.get_disease_by_code(neighbour_code)
+                diseases[neighbour_disease['code']]=neighbour_disease['name']
+        return diseases
