@@ -38,7 +38,7 @@ class ArticleProcessor:
     def get_articles_by_keyword(self, keyword, num):
         return self._get_articles_by_query("id:"+keyword + " or name_s:\""+keyword+"\" or abstract_t:\""+keyword + "\" or txt_t:\""+keyword+"\"",num)
 
-    def get_articles_by_id(self, keyword, num):
+    def get_articles_by_id(self, keyword, num=1):
         return self._get_articles_by_query("id:"+keyword,num)
 
     def get_articles_by_name(self, keyword, num):

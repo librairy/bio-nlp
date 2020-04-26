@@ -38,7 +38,7 @@ class DiseaseProcessor:
             if ('level_i' in result):
                 disease['level'] = result['level_i']
             diseases.append(disease)
-        print("found diseases",diseases)
+        #print("found diseases",diseases)
         return diseases
 
     def get_diseases_as_terms(self, size,level):
@@ -55,13 +55,13 @@ class DiseaseProcessor:
         url = self.cord19_solr_url + "/terms"
         resp = requests.get(url=url, params=params)
         data = resp.json()
-        print(data)
+        #print(data)
         diseases = []
         results = data['terms'][field]
         i = 0
         while (i<len(results)):
             disease_code = results[i]
-            print("disease code", disease_code)
+            #print("disease code", disease_code)
             i+=1
             frequency = results[i]
             i+=1
@@ -87,7 +87,7 @@ class DiseaseProcessor:
                 fields = ["bionlp_diseases_N"+str(l)  for l in range(1,20)]
                 if (int(level) >= 0):
                     fields = ["bionlp_diseases_N"+str(level)]
-                print("searching diseases in paragraphs by: ", query , " with fields: ", fields)
+                #print("searching diseases in paragraphs by: ", query , " with fields: ", fields)
                 paragraphs = self.cord19_solr.search(q=query,fl=",".join(fields),rows=window_size,cursorMark=cursor,sort="id asc")
                 cursor = paragraphs.nextCursorMark
                 counter += len(paragraphs)

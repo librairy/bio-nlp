@@ -136,25 +136,7 @@ def get_diseases():
     diseases = disease_service.get_diseases(query,size,level)
     return jsonify(diseases)
 
-@app.route('/bio-api/articles', methods=['GET'])
-def get_articles():
-    articles = []
-    if (len(request.args) == 0):
-        articles = article_service.get_articles(10)
-    else:
-        for keyword in request.args.get('keywords').split(","):
-
-            for drug in drug_service.get_drugs_by_keyword(keyword):
-                articles.extend(article_service.get_articles_by_drug(drug['code'],10))
-
-            for disease in disease_service.get_diseases_by_keyword(keyword):
-                articles.extend(article_service.get_articles_by_disease(disease['name'],10))
-
-            articles.extend(article_service.get_articles_by_keyword(keyword,10))
-
-    return jsonify(articles)
-
-@app.route('/bio-api/paragraphs', methods=['GET'])
+@app.route('/bio-api/texts', methods=['GET'])
 def get_paragraphs():
     size = get_size_param(request)
     query = get_query_param(request)

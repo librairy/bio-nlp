@@ -38,7 +38,7 @@ class DrugProcessor:
             if ('level_i' in result):
                 drug['level'] = result['level_i']
             drugs.append(drug)
-        print("found drugs",drugs)
+        #print("found drugs",drugs)
         return drugs
 
     def get_drugs_as_terms(self, size,level):
@@ -55,13 +55,13 @@ class DrugProcessor:
         url = self.cord19_solr_url + "/terms"
         resp = requests.get(url=url, params=params)
         data = resp.json()
-        print(data)
+        #print(data)
         drugs = []
         results = data['terms'][field]
         i = 0
         while (i<len(results)):
             drug_code = results[i]
-            print("drug code", drug_code)
+            #print("drug code", drug_code)
             i+=1
             frequency = results[i]
             i+=1
@@ -87,7 +87,7 @@ class DrugProcessor:
                 fields = ["bionlp_drugs_N"+str(l)  for l in range(1,6)]
                 if (int(level) >= 0):
                     fields = ["bionlp_drugs_N"+str(level)]
-                print("searching drugs in paragraphs by: ", query , " with fields: ", fields)
+                #print("searching drugs in paragraphs by: ", query , " with fields: ", fields)
                 paragraphs = self.cord19_solr.search(q=query,fl=",".join(fields),rows=window_size,cursorMark=cursor,sort="id asc")
                 cursor = paragraphs.nextCursorMark
                 counter += len(paragraphs)
