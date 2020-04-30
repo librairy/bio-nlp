@@ -47,4 +47,4 @@ Some examples:
 
 ## Texts about...
 * About covid-19 and inflammation difficulties: [https://librairy.linkeddata.es/bio-api/texts?keywords=covid19,inflammation](https://librairy.linkeddata.es/bio-api/texts?keywords=covid19,inflammation)
-* About *hydroxychloroquine*: [https://librairy.linkeddata.es/bio-api/paragraphs?keywordshydroxychloroquine](https://librairy.linkeddata.es/bio-api/paragraphs?keywordshydroxychloroquine)
+* About *hydroxychloroquine*: [https://librairy.linkeddata.es/bio-api/texts?keywordshydroxychloroquine](https://librairy.linkeddata.es/bio-api/texts?keywordshydroxychloroquine)
