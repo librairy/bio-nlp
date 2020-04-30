@@ -12,7 +12,7 @@ class DrugProcessor:
         self.cord19_solr_url = 'http://librairy.linkeddata.es/data/covid-paragraphs'
         self.cord19_solr = pysolr.Solr(self.cord19_solr_url, timeout=20)
 
-        self.index = AnnoyIndex(186, 'angular')
+        self.index = AnnoyIndex(1046, 'angular') #186
         self.index.load('index.annoy')
 
         with open('index.dictionary', mode='r') as infile:
@@ -113,16 +113,25 @@ class DrugProcessor:
                 break
         return result
 
-    def get_related_drugs(self, code, level):
+    def get_related_drugs(self, code, size, level):
         search_word=code
-        #print("search-word",search_word)
-        ref_index = self.index_dict[search_word]
-        #print("ref-index",ref_index)
-        drugs = {}
-        for neighbour in self.index.get_nns_by_item(ref_index, 11):
+        drugs = []
+        if (not search_word in self.index_dict):
+            return drugs
+        ref_index = self.index_dict[search_word]        
+        for neighbour in self.index.get_nns_by_item(ref_index, int(size)*3):
             #print("neighbour",neighbour)
-            neighbour_code=self.index_inv_dict[neighbour]
-            if (code != neighbour_code):
-                neighbour_drug = self.get_drug_by_code(neighbour_code)
-                drugs[neighbour_drug['code']]=neighbour_drug['name']
+            if (neighbour in self.index_inv_dict):
+                neighbour_code=self.index_inv_dict[neighbour]
+                if (code != neighbour_code):
+                    neighbours = self.find_drugs(neighbour_code)
+                    if (len(neighbours) > 0):
+                        drug = neighbours[0]
+                        if (level == -1 ):
+                            drugs.append(drug)
+                        elif (drug['level'] == level) :
+                            drugs.append(drug)
+
+            if (len(drugs) == size):
+                break
         return drugs

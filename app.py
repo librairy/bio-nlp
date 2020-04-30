@@ -85,12 +85,14 @@ def get_query_param(request):
             break
 
         for kw_as_drug in  drug_service.find_drugs(keyword):
-            drugs_filter.append("bionlp_drugs_C"+str(kw_as_drug['level'])+":"+kw_as_drug['code'])
-            break
+            if (('level' in kw_as_drug) and ('code' in kw_as_drug)):
+                drugs_filter.append("bionlp_drugs_C"+str(kw_as_drug['level'])+":"+kw_as_drug['code'])
+                break
 
         for kw_as_disease in  disease_service.find_diseases(keyword):
-            diseases_filter.append("bionlp_diseases_C"+str(kw_as_disease['level'])+":"+kw_as_disease['code'])
-            break
+            if (('level' in kw_as_disease) and ('code' in kw_as_disease)):
+                diseases_filter.append("bionlp_diseases_C"+str(kw_as_disease['level'])+":"+kw_as_disease['code'])
+                break
 
         text_filter.append("text_t:\""+keyword+"\"")
 
@@ -126,6 +128,23 @@ def get_drugs():
     query = get_query_param(request)
     drugs = drug_service.get_drugs(query,size,level)
     return jsonify(drugs)
+
+@app.route('/bio-api/replacements', methods=['GET'])
+def get_interactions():
+    size = get_size_param(request)
+    level= get_level_param(request)
+
+    keywords = ""
+    if ('keywords' in request.args):
+        keywords = request.args['keywords'].split(",")[0]
+
+    interactions = []
+    if (len(keywords) > 0):
+        drugs = drug_service.find_drugs(keywords)
+        if (len(drugs) > 0):
+            drug = drugs[0]
+            interactions.extend( drug_service.get_related_drugs(drug['code'],size,level))
+    return jsonify(interactions)
 
 
 @app.route('/bio-api/diseases', methods=['GET'])

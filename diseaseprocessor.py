@@ -12,18 +12,6 @@ class DiseaseProcessor:
         self.cord19_solr_url = 'http://librairy.linkeddata.es/data/covid-paragraphs'
         self.cord19_solr = pysolr.Solr(self.cord19_solr_url, timeout=20)
 
-        self.index = AnnoyIndex(186, 'angular')
-        self.index.load('index.annoy')
-
-        with open('index.dictionary', mode='r') as infile:
-            reader = csv.reader(infile)
-            self.index_dict = dict((rows[0],int(rows[1])) for rows in reader)
-
-        self.index_inv_dict = {}
-        for key in self.index_dict.keys():
-            value = self.index_dict[key]
-            self.index_inv_dict[value]=key
-
 
     def find_diseases(self, keyword):
         query = "name_t:\""+keyword+"\" or synonyms:\""+keyword + "\" or mappings:\""+ keyword + "\" or id:" + keyword
@@ -112,17 +100,3 @@ class DiseaseProcessor:
             if (len(result) >= size):
                 break
         return result
-
-    def get_related_diseases(self, code, level):
-        search_word=code
-        #print("search-word",search_word)
-        ref_index = self.index_dict[search_word]
-        #print("ref-index",ref_index)
-        diseases = {}
-        for neighbour in self.index.get_nns_by_item(ref_index, 11):
-            #print("neighbour",neighbour)
-            neighbour_code=self.index_inv_dict[neighbour]
-            if (code != neighbour_code):
-                neighbour_disease = self.get_disease_by_code(neighbour_code)
-                diseases[neighbour_disease['code']]=neighbour_disease['name']
-        return diseases
